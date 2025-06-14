@@ -49,3 +49,55 @@ exports.login = async (req, res) => {
     res.status(500).json({ success: false, message: 'Error del servidor' });
   }
 };
+
+// controllers/authController.js
+exports.register = async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+
+    // Verificar si el usuario ya existe
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: 'El usuario ya existe con este email'
+      });
+    }
+
+    // Crear nuevo usuario
+    const user = new User({ name, email, password });
+    await user.save();
+
+    res.status(201).json({
+      success: true,
+      message: 'Usuario registrado exitosamente'
+    });
+
+  } catch (error) {
+    console.error('Error en registro:', error);
+    
+    // Manejar error de duplicados de MongoDB
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: 'Este correo ya está registrado'
+      });
+    }
+
+    // Manejar errores de validación de Mongoose
+    if (error.name === 'ValidationError') {
+      const errors = Object.values(error.errors).map(e => e.message);
+      return res.status(400).json({
+        success: false,
+        message: 'Error de validación',
+        errors
+      });
+    }
+
+    // Error genérico
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor'
+    });
+  }
+};
